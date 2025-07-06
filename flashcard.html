@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>단어 학습장</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background: linear-gradient(135deg,#dbeafe,#fbcfe8);
+        }
+        .card { transition: transform 0.3s ease, background-color 0.3s ease; }
+        .card.correct { background-color:#dcfce7; border-color:#22c55e; transform:scale(1.05); }
+        .card.incorrect { animation: shake 0.5s; background-color:#fee2e2; border-color:#ef4444; }
+        @keyframes shake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-10px);} 75%{transform:translateX(10px);} }
+        .btn { transition: background-color 0.2s, transform 0.2s, opacity 0.3s; }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); }
+        .btn:disabled { opacity:0.6; cursor:not-allowed; }
+        .btn-primary { background-color:#3b82f6; color:white; }
+        .btn-primary:hover:not(:disabled) { background-color:#2563eb; }
+        .btn-secondary { background-color:#6b7280; color:white; }
+        .btn-secondary:hover:not(:disabled) { background-color:#4b5563; }
+        .btn-tertiary { background-color:#f43f5e; color:white; }
+        .btn-tertiary:hover:not(:disabled) { background-color:#e11d48; }
+        .btn-next { background-color:#10b981; color:white; }
+        .btn-next:hover:not(:disabled) { background-color:#059669; }
+        .btn-hint { background-color:#f59e0b; color:white; }
+        .btn-hint:hover:not(:disabled) { background-color:#d97706; }
+        .btn-answer { background-color:#ef4444; color:white; }
+        .btn-answer:hover:not(:disabled) { background-color:#dc2626; }
+        .progress-bar-bg { background-color:#e5e7eb; }
+        .progress-bar-fill { background-color:#f59e0b; transition: width 0.5s ease-in-out; }
+        #review-section { background-color:#ffedd5; border-left:5px solid #f97316; }
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin:0; }
+        #history {
+            max-height:180px;
+            overflow-y:auto;
+            background-color:#fff7ed;
+            padding:0.5rem;
+            border-radius:0.5rem;
+        }
+        #score.pop { animation: pop 0.3s ease; }
+        @keyframes pop { 0%{transform:scale(1);} 50%{transform:scale(1.3);} 100%{transform:scale(1);} }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+<div id="app" class="w-full max-w-lg p-4 md:p-8 space-y-6 bg-white/70 rounded-xl shadow-xl backdrop-blur">
+    <!-- Start Screen -->
+    <div id="start-screen" class="text-center space-y-4">
+        <h1 class="text-5xl font-bold text-violet-600 drop-shadow">단어 학습장 🚀</h1>
+        <div class="mt-4">
+            <label for="unit-select" class="block text-lg font-bold text-gray-700 mb-1">Day/Unit 선택</label>
+            <select id="unit-select" class="w-full border-2 border-gray-300 rounded-lg p-2 text-lg"></select>
+        </div>
+        <div class="max-w-xs mx-auto">
+            <label for="question-count-input" class="text-lg font-bold text-gray-700 mb-1 block">문제 갯수</label>
+            <input type="number" id="question-count-input" class="w-full px-4 py-2 text-xl text-center border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="30" min="1">
+            <p id="count-error" class="text-red-500 h-4 mt-1 text-sm"></p>
+        </div>
+        <button id="start-btn" class="btn btn-primary w-full max-w-xs mx-auto py-3 text-xl rounded-lg shadow-md">시작하기</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="hidden space-y-4">
+        <div class="w-full flex items-center space-x-4">
+            <div class="w-full progress-bar-bg rounded-full h-4">
+                <div id="progress-bar" class="progress-bar-fill h-4 rounded-full" style="width:0%"></div>
+            </div>
+            <div id="timer" class="text-lg font-bold text-gray-600">00:00</div>
+        </div>
+        <div id="score" class="text-right text-xl font-bold">Score: 0 | Streak: 0</div>
+        <div id="card" class="card bg-white p-6 rounded-2xl shadow-lg border-2 border-gray-200 text-center">
+            <p class="text-lg text-gray-500 mb-2">문제 <span id="current-number">1</span> / <span id="total-number"></span></p>
+            <p id="word-meaning" class="text-3xl font-bold text-gray-800 h-24 flex items-center justify-center"></p>
+            <input type="text" id="answer-input" class="w-full mt-4 px-4 py-3 text-2xl border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="정답을 입력하세요" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <p id="message" class="mt-4 h-6 text-xl font-bold"></p>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+            <button id="hint-btn" class="btn btn-hint py-3 rounded-lg shadow-md">힌트</button>
+            <button id="submit-btn" class="btn btn-primary py-3 rounded-lg shadow-md">제출</button>
+            <button id="answer-btn" class="btn btn-answer py-3 rounded-lg shadow-md">정답보기</button>
+        </div>
+        <button id="next-btn" class="btn btn-next w-full py-3 text-xl rounded-lg shadow-md hidden">다음 문제</button>
+        <ul id="history" class="list-disc list-inside text-lg"></ul>
+    </div>
+
+    <!-- Final Screen -->
+    <div id="final-screen" class="hidden text-center p-6 bg-white rounded-2xl shadow-lg">
+        <h2 id="final-title" class="text-4xl font-bold text-green-500">퀴즈 완료!</h2>
+        <p id="final-score" class="text-2xl mt-4">최종 점수: <span class="font-bold"></span></p>
+        <p class="text-xl text-gray-600 mt-2">걸린 시간: <span id="final-time" class="font-bold"></span></p>
+        <div id="review-section" class="hidden mt-6 p-4 rounded-lg text-left">
+            <h3 class="text-2xl font-bold text-orange-600 mb-2">다시 복습해볼 단어들!</h3>
+            <ul id="review-list" class="list-disc list-inside text-lg text-gray-700"></ul>
+        </div>
+        <div class="mt-8 flex justify-center space-x-2">
+            <button id="restart-btn" class="btn btn-primary px-6 py-3 text-lg rounded-lg shadow-md">처음으로</button>
+            <button id="review-start-btn" class="btn btn-secondary px-6 py-3 text-lg rounded-lg shadow-md hidden">틀린 문제 복습하기</button>
+            <button id="finish-btn" class="btn btn-tertiary px-6 py-3 text-lg rounded-lg shadow-md">끝내기</button>
+        </div>
+    </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+// DOM elements
+const unitSelect = document.getElementById('unit-select');
+const questionInput = document.getElementById('question-count-input');
+const countErrorEl = document.getElementById('count-error');
+const startBtn = document.getElementById('start-btn');
+const startScreen = document.getElementById('start-screen');
+const quizScreen = document.getElementById('quiz-screen');
+const finalScreen = document.getElementById('final-screen');
+const progressBar = document.getElementById('progress-bar');
+const timerEl = document.getElementById('timer');
+const scoreEl = document.getElementById('score');
+const historyEl = document.getElementById('history');
+const wordMeaningEl = document.getElementById('word-meaning');
+const currentNumberEl = document.getElementById('current-number');
+const totalNumberEl = document.getElementById('total-number');
+const answerInput = document.getElementById('answer-input');
+const messageEl = document.getElementById('message');
+const hintBtn = document.getElementById('hint-btn');
+const submitBtn = document.getElementById('submit-btn');
+const answerBtn = document.getElementById('answer-btn');
+const nextBtn = document.getElementById('next-btn');
+const finalTitle = document.getElementById('final-title');
+const finalScoreEl = document.getElementById('final-score').querySelector('span');
+const finalTimeEl = document.getElementById('final-time');
+const reviewSection = document.getElementById('review-section');
+const reviewListEl = document.getElementById('review-list');
+const restartBtn = document.getElementById('restart-btn');
+const reviewStartBtn = document.getElementById('review-start-btn');
+const finishBtn = document.getElementById('finish-btn');
+
+// state
+let state = {};
+
+function resetState() {
+    state = {
+        words: [],
+        currentIndex: 0,
+        score: 0,
+        streak: 0,
+        incorrect: [],
+        hintUsed: false,
+        isAnswered: false,
+        isReviewing: false,
+        isFinished: false,
+        startTime: null,
+        timer: null
+    };
+}
+
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function startTimer() {
+    state.startTime = new Date();
+    state.timer = setInterval(() => {
+        const diff = Math.floor((new Date() - state.startTime) / 1000);
+        const m = String(Math.floor(diff / 60)).padStart(2, '0');
+        const s = String(diff % 60).padStart(2, '0');
+        timerEl.textContent = `${m}:${s}`;
+    }, 1000);
+}
+
+function stopTimer() { clearInterval(state.timer); }
+
+function renderStart() {
+    startScreen.classList.remove('hidden');
+    quizScreen.classList.add('hidden');
+    finalScreen.classList.add('hidden');
+}
+
+function renderQuiz() {
+    startScreen.classList.add('hidden');
+    quizScreen.classList.remove('hidden');
+    finalScreen.classList.add('hidden');
+
+    const word = state.words[state.currentIndex];
+    wordMeaningEl.textContent = word.meaning;
+    answerInput.value = '';
+    messageEl.textContent = '';
+    answerInput.disabled = false;
+    hintBtn.disabled = false;
+    answerBtn.disabled = false;
+    quizScreen.querySelector('#card').classList.remove('correct','incorrect');
+
+    currentNumberEl.textContent = state.currentIndex + 1;
+    totalNumberEl.textContent = state.words.length;
+    progressBar.style.width = `${(state.currentIndex / state.words.length) * 100}%`;
+
+    if (state.isAnswered) {
+        nextBtn.classList.remove('hidden');
+    } else {
+        nextBtn.classList.add('hidden');
+    }
+    answerInput.focus();
+}
+
+function renderFinal() {
+    startScreen.classList.add('hidden');
+    quizScreen.classList.add('hidden');
+    finalScreen.classList.remove('hidden');
+    stopTimer();
+    finalTimeEl.textContent = timerEl.textContent;
+    if (state.isReviewing) {
+        finalTitle.textContent = '복습 완료!';
+        finalScoreEl.textContent = '';
+    } else {
+        finalTitle.textContent = '퀴즈 완료!';
+        finalScoreEl.textContent = `${state.score} / ${state.words.length}`;
+    }
+
+    if (state.incorrect.length > 0) {
+        reviewSection.classList.remove('hidden');
+        reviewStartBtn.classList.remove('hidden');
+        reviewListEl.innerHTML = '';
+        state.incorrect.forEach(w => {
+            const li = document.createElement('li');
+            li.textContent = `${w.word}: ${w.meaning}`;
+            reviewListEl.appendChild(li);
+        });
+    } else {
+        reviewSection.classList.add('hidden');
+        reviewStartBtn.classList.add('hidden');
+        if (!state.isReviewing) {
+            finalTitle.textContent = '완벽해요! 🥳';
+        }
+    }
+}
+
+function updateScore() {
+    scoreEl.textContent = `Score: ${state.score} | Streak: ${state.streak}`;
+    scoreEl.classList.add('pop');
+    setTimeout(() => scoreEl.classList.remove('pop'), 300);
+}
+
+function addHistory(word, correct) {
+    if (!correct) return; // wrong answers shouldn't reveal the word
+    const li = document.createElement('li');
+    li.textContent = word.word;
+    li.className = 'text-green-600';
+    historyEl.prepend(li);
+}
+
+function addIncorrectWord(word) {
+    if (!state.incorrect.some(w => w.word === word.word)) {
+        state.incorrect.push(word);
+    }
+}
+
+// event handlers
+startBtn.addEventListener('click', () => {
+    const unit = unitSelect.value;
+    let count = parseInt(questionInput.value);
+    countErrorEl.textContent = '';
+    const words = data[unit] || [];
+    if (isNaN(count) || count <= 0 || count > words.length) {
+        count = words.length;
+        if (words.length < parseInt(questionInput.value)) {
+            countErrorEl.textContent = `최대 ${words.length}개까지 가능해요.`;
+        }
+    }
+    resetState();
+    state.words = shuffle(words.slice()).slice(0, count);
+    startTimer();
+    renderQuiz();
+});
+
+submitBtn.addEventListener('click', () => {
+    if (state.isAnswered) return;
+    const user = answerInput.value.trim().toLowerCase().replace(/\s+/g, '');
+    const correct = state.words[state.currentIndex].word.toLowerCase().replace(/\s+/g, '');
+    const card = document.getElementById('card');
+    if (user === correct) {
+        messageEl.textContent = '정답입니다! 🎉';
+        messageEl.style.color = '#16a34a';
+        card.classList.add('correct');
+        state.streak += 1;
+        let gained = 10;
+        if (state.streak % 10 === 0) gained += 30;
+        else if (state.streak % 5 === 0) gained += 20;
+        if (!state.isReviewing && !state.hintUsed) state.score += gained;
+        addHistory(state.words[state.currentIndex], true);
+        state.isAnswered = true;
+        nextBtn.classList.remove('hidden');
+        answerInput.disabled = true;
+        hintBtn.disabled = true;
+        answerBtn.disabled = true;
+    } else {
+        messageEl.textContent = '오답입니다! 다시 시도해보세요 😥';
+        messageEl.style.color = '#dc2626';
+        card.classList.add('incorrect');
+        setTimeout(() => card.classList.remove('incorrect'), 500);
+        state.streak = 0;
+        addIncorrectWord(state.words[state.currentIndex]);
+        answerInput.select();
+    }
+    updateScore();
+});
+
+hintBtn.addEventListener('click', () => {
+    state.hintUsed = true;
+    const first = state.words[state.currentIndex].word.charAt(0).toLowerCase();
+    messageEl.textContent = `힌트: 첫 글자는 '${first}'`;
+    messageEl.style.color = '#f59e0b';
+    addIncorrectWord(state.words[state.currentIndex]);
+    hintBtn.disabled = true;
+});
+
+answerBtn.addEventListener('click', () => {
+    answerInput.value = state.words[state.currentIndex].word;
+    messageEl.textContent = `정답: ${state.words[state.currentIndex].word}`;
+    messageEl.style.color = '#ef4444';
+    addIncorrectWord(state.words[state.currentIndex]);
+    document.getElementById('card').classList.add('incorrect');
+    state.isAnswered = true;
+    nextBtn.classList.remove('hidden');
+    answerInput.disabled = true;
+    hintBtn.disabled = true;
+    answerBtn.disabled = true;
+});
+
+nextBtn.addEventListener('click', () => {
+    state.currentIndex++;
+    state.isAnswered = false;
+    state.hintUsed = false;
+    if (state.currentIndex >= state.words.length) {
+        state.isFinished = true;
+        renderFinal();
+        return;
+    }
+    renderQuiz();
+});
+
+answerInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !state.isAnswered) submitBtn.click();
+});
+
+restartBtn.addEventListener('click', () => {
+    resetState();
+    renderStart();
+});
+
+reviewStartBtn.addEventListener('click', () => {
+    const reviewWords = shuffle(state.incorrect.slice());
+    resetState();
+    state.words = reviewWords;
+    state.isReviewing = true;
+    startTimer();
+    renderQuiz();
+});
+
+finishBtn.addEventListener('click', () => {
+    document.getElementById('app').innerHTML = '<div class="text-center p-8"><h1 class="text-4xl font-bold text-gray-700">수고했어요! 다음에 또 만나요 👋</h1></div>';
+});
+
+// initial setup
+Object.keys(data).forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = key;
+    unitSelect.appendChild(opt);
+});
+unitSelect.selectedIndex = 0;
+resetState();
+renderStart();
+</script>
+</body>
+</html>
