@@ -248,9 +248,10 @@ function updateScore() {
 }
 
 function addHistory(word, correct) {
+    if (!correct) return; // wrong answers shouldn't reveal the word
     const li = document.createElement('li');
     li.textContent = word.word;
-    li.className = correct ? 'text-green-600' : 'text-red-600';
+    li.className = 'text-green-600';
     historyEl.prepend(li);
 }
 
@@ -305,7 +306,6 @@ submitBtn.addEventListener('click', () => {
         setTimeout(() => card.classList.remove('incorrect'), 500);
         state.streak = 0;
         addIncorrectWord(state.words[state.currentIndex]);
-        addHistory(state.words[state.currentIndex], false);
         answerInput.select();
     }
     updateScore();
