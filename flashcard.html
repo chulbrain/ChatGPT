@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Vocabulary Flashcards</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f8ff;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    color: #2c7abe;
+  }
+  #container {
+    margin-top: 20px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    width: 90%;
+    max-width: 500px;
+  }
+  .controls {
+    margin-top: 10px;
+  }
+  button {
+    padding: 8px 12px;
+    margin-right: 5px;
+  }
+  #result {
+    margin-top: 15px;
+    font-weight: bold;
+  }
+  #score {
+    margin-top: 15px;
+  }
+</style>
+</head>
+<body>
+<h1>Fun Vocabulary Trainer</h1>
+<div id="setup">
+  <label for="unitSelect">Select Unit:</label>
+  <select id="unitSelect"></select>
+  <button onclick="startGame()">Start</button>
+</div>
+<div id="container" style="display:none;">
+  <div id="meaning"></div>
+  <input type="text" id="answerInput" placeholder="Type the word" onkeydown="if(event.key==='Enter'){checkAnswer();}">
+  <div class="controls">
+    <button onclick="showHint()">Hint</button>
+    <button onclick="showAnswer()">Show Answer</button>
+    <button onclick="checkAnswer()">Submit</button>
+  </div>
+  <div id="result"></div>
+  <div id="score">Score: 0 | Streak: 0</div>
+</div>
+<script src="data.js"></script>
+<script>
+// data.js defines a global `data` object with all vocabulary units
+let current = [];
+let wrong = [];
+let index = 0;
+let score = 0;
+let streak = 0;
+let currentWord = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  const select = document.getElementById('unitSelect');
+  Object.keys(data).forEach(key => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = key;
+    select.appendChild(opt);
+  });
+});
+
+function startGame() {
+  const unit = document.getElementById('unitSelect').value;
+  current = shuffle([...data[unit]]);
+  wrong = [];
+  score = 0;
+  streak = 0;
+  document.getElementById('score').textContent = `Score: ${score} | Streak: ${streak}`;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('container').style.display = 'block';
+  nextWord();
+}
+
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function nextWord() {
+  if (current.length === 0) {
+    if (wrong.length > 0) {
+      current = shuffle([...wrong]);
+      wrong = [];
+    } else {
+      document.getElementById('meaning').textContent = 'All done! Great job!';
+      document.getElementById('answerInput').style.display = 'none';
+      document.querySelector('.controls').style.display = 'none';
+      return;
+    }
+  }
+  currentWord = current.pop();
+  document.getElementById('meaning').textContent = currentWord.meaning;
+  document.getElementById('answerInput').value = '';
+  document.getElementById('result').textContent = '';
+}
+
+function showHint() {
+  if (currentWord) {
+    document.getElementById('result').textContent = 'Hint: ' + currentWord.word.charAt(0);
+  }
+}
+
+function showAnswer() {
+  if (currentWord) {
+    document.getElementById('result').textContent = 'Answer: ' + currentWord.word;
+  }
+}
+
+function checkAnswer() {
+  const input = document.getElementById('answerInput').value.trim().toLowerCase();
+  if (!currentWord) return;
+  if (input === currentWord.word.toLowerCase()) {
+    streak += 1;
+    let gained = 10;
+    if (streak % 10 === 0) {
+      gained += 30;
+    } else if (streak % 5 === 0) {
+      gained += 20;
+    }
+    score += gained;
+    document.getElementById('result').textContent = 'Correct! +' + gained + ' points';
+  } else {
+    streak = 0;
+    score += 0;
+    wrong.push(currentWord);
+    document.getElementById('result').textContent = 'Oops! Correct answer: ' + currentWord.word;
+  }
+  document.getElementById('score').textContent = `Score: ${score} | Streak: ${streak}`;
+  nextWord();
+}
+</script>
+</body>
+</html>
