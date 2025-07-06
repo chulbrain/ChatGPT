@@ -5,24 +5,26 @@
 <title>Vocabulary Flashcards</title>
 <style>
   body {
-    font-family: Arial, sans-serif;
-    background-color: #f0f8ff;
-    color: #333;
+    font-family: "Comic Sans MS", Arial, sans-serif;
+    background: linear-gradient(#95d7ff, #e0f7ff);
+    color: #222;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-height: 100vh;
   }
   h1 {
-    color: #2c7abe;
+    color: #0668d0;
+    text-shadow: 1px 1px 2px #fff;
   }
   #container {
     margin-top: 20px;
     background: #fff;
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     width: 90%;
     max-width: 500px;
   }
@@ -32,13 +34,44 @@
   button {
     padding: 8px 12px;
     margin-right: 5px;
+    border: none;
+    border-radius: 6px;
+    background: #2d89ef;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #1e64b3;
   }
   #result {
     margin-top: 15px;
     font-weight: bold;
+    min-height: 24px;
   }
   #score {
     margin-top: 15px;
+    font-size: 1.1em;
+  }
+  #history {
+    margin-top: 20px;
+    list-style: none;
+    padding: 0;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+  .correct {
+    color: #28a745;
+  }
+  .wrong {
+    color: #dc3545;
+  }
+  @keyframes pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+  #score.pop {
+    animation: pop 0.3s ease;
   }
 </style>
 </head>
@@ -59,6 +92,7 @@
   </div>
   <div id="result"></div>
   <div id="score">Score: 0 | Streak: 0</div>
+  <ul id="history"></ul>
 </div>
 <script src="data.js"></script>
 <script>
@@ -69,6 +103,8 @@ let index = 0;
 let score = 0;
 let streak = 0;
 let currentWord = null;
+let scoreElem;
+let historyElem;
 
 window.addEventListener('DOMContentLoaded', () => {
   const select = document.getElementById('unitSelect');
@@ -78,6 +114,8 @@ window.addEventListener('DOMContentLoaded', () => {
     opt.textContent = key;
     select.appendChild(opt);
   });
+  scoreElem = document.getElementById('score');
+  historyElem = document.getElementById('history');
 });
 
 function startGame() {
@@ -86,9 +124,10 @@ function startGame() {
   wrong = [];
   score = 0;
   streak = 0;
-  document.getElementById('score').textContent = `Score: ${score} | Streak: ${streak}`;
+  updateScore();
   document.getElementById('setup').style.display = 'none';
   document.getElementById('container').style.display = 'block';
+  historyElem.innerHTML = '';
   nextWord();
 }
 
@@ -143,14 +182,28 @@ function checkAnswer() {
     }
     score += gained;
     document.getElementById('result').textContent = 'Correct! +' + gained + ' points';
+    const li = document.createElement('li');
+    li.textContent = currentWord.word;
+    li.className = 'correct';
+    historyElem.prepend(li);
   } else {
     streak = 0;
     score += 0;
     wrong.push(currentWord);
     document.getElementById('result').textContent = 'Oops! Correct answer: ' + currentWord.word;
+    const li = document.createElement('li');
+    li.textContent = currentWord.word;
+    li.className = 'wrong';
+    historyElem.prepend(li);
   }
-  document.getElementById('score').textContent = `Score: ${score} | Streak: ${streak}`;
+  updateScore();
   nextWord();
+}
+
+function updateScore() {
+  scoreElem.textContent = `Score: ${score} | Streak: ${streak}`;
+  scoreElem.classList.add('pop');
+  setTimeout(() => scoreElem.classList.remove('pop'), 300);
 }
 </script>
 </body>
