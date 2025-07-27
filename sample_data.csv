@@ -1,0 +1,5 @@
+Alice,knows,Bob
+Bob,knows,Charlie
+Charlie,likes,Python
+Bob,works_with,Eve
+Eve,knows,Alice
